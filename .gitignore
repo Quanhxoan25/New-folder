@@ -1,0 +1,11 @@
+*.parquet
+*.csv
+*.zip
+*.db
+*.json
+
+data/
+logs/
+venv/
+__pycache__/
+.env
