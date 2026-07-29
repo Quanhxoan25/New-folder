@@ -25,7 +25,7 @@ def load_db_team_tb_to_parquet():
     query_file_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\elt_pipeline\scripts\extract\extract_db_teams_tb_to_parquet.sql"
 
     date = datetime.date.today().strftime("%Y_%m_%d")
-    parquet_file_path = f"D:/HocTap/DATA ENGINEERS/Project/New folder/elt_pipeline/data/completed/load_db_to_dl/load_db_team_tb_to_dl_{date}.parquet"
+    parquet_file_path = f"D:/HocTap/DATA ENGINEERS/Project/New folder/elt_pipeline/data/completed/load_db_to_dl/load_team_tb_to_dl/load_db_team_tb_to_dl_{date}.parquet"
 
     os.makedirs(os.path.dirname(parquet_file_path), exist_ok=True)
 

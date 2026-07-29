@@ -3,6 +3,7 @@
 *.zip
 *.db
 *.json
+*.duckdb
 
 data/
 logs/
