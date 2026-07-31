@@ -18,38 +18,31 @@ CREATE TABLE IF NOT EXISTS dim_league (
     league VARCHAR(100)
 );
 
-CREATE TABLE IF NOT EXISTS dim_team (
-    team_id INTEGER PRIMARY KEY
-);
-
 CREATE TABLE IF NOT EXISTS dim_date (
     date_id INTEGER PRIMARY KEY, 
-    game_datetime_est TIMESTAMP,
-    game_date DATE,
+    game_day VARCHAR(10),
     season VARCHAR(20)
 );
 
 CREATE TABLE IF NOT EXISTS dim_arena (
-    arena_id INTEGER PRIMARY KEY,
-    arena_city_id INTEGER,
+    arena_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    arena_city VARCHAR(50),
     arena_state VARCHAR(50),
     arena_name VARCHAR(150),
-    FOREIGN KEY (arena_city_id) REFERENCES dim_city(city_id)
 );
 
 CREATE TABLE IF NOT EXISTS dim_players (
-    person_id INTEGER PRIMARY KEY,
+    player_id INTEGER PRIMARY KEY,
     country_id INTEGER,
     school_id INTEGER,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
+    full_name VARCHAR(200),
     birth_date DATE,
     height_inches DOUBLE,
     body_weight_lbs DOUBLE,
     jersey VARCHAR(10),
-    guard BOOLEAN,
-    forward BOOLEAN,
-    center BOOLEAN,
+    position VARCHAR(10),
     dleague_flag BOOLEAN,
     nba_flag BOOLEAN,
     games_played_flag BOOLEAN,
@@ -59,8 +52,8 @@ CREATE TABLE IF NOT EXISTS dim_players (
     FOREIGN KEY (school_id) REFERENCES dim_school(school_id)
 );
 
-CREATE TABLE IF NOT EXISTS dim_team_league (
-    team_league_id INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS dim_team(
+    team_tb_id INTEGER PRIMARY KEY,
     team_id INTEGER,
     league_id INTEGER,
     city_id INTEGER,
@@ -68,7 +61,6 @@ CREATE TABLE IF NOT EXISTS dim_team_league (
     team_abbrev VARCHAR(10),
     season_founded VARCHAR(20),
     season_active_till VARCHAR(20),
-    FOREIGN KEY (team_id) REFERENCES dim_team(team_id),
     FOREIGN KEY (league_id) REFERENCES dim_league(league_id),
     FOREIGN KEY (city_id) REFERENCES dim_city(city_id)
 );
