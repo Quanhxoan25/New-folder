@@ -150,7 +150,7 @@ def insert_into_dim_arena():
     """)
 
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS dim_arena (
+        CREATE OR REPLACE TABLE dim_arena (
             arena_id INTEGER PRIMARY KEY, 
             arena_city VARCHAR(50),
             arena_state VARCHAR(50),
@@ -161,13 +161,16 @@ def insert_into_dim_arena():
     conn.execute("""
         INSERT INTO dim_arena
         SELECT DISTINCT 
-            ROW_NUMBER() OVER () + COALESCE((SELECT MAX(arena_id) FROM dim_arena), 0) AS arena_id,
-            arena_city, arena_state, arena_name
-        FROM stag_schedules
+            arena_id, arena_city, arena_state, arena_name
+        FROM stag_games
         WHERE arena_city IS NOT NULL 
             AND arena_state IS NOT NULL 
             AND arena_name IS NOT NULL
-        ON CONFLICT(arena_name) DO NOTHING;
+            AND arena_id IS NOT NULL
+        ON CONFLICT(arena_id) DO UPDATE SET
+            arena_name = EXCLUDED.arena_name,
+            arena_city = EXCLUDED.arena_city,
+            arena_state = EXCLUDED.arena_state;
     """)
 
     count = conn.execute("SELECT COUNT(*) FROM dim_arena").fetchone()[0]
@@ -361,25 +364,111 @@ def insert_into_dim_game():
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS dim_game (
-        game_id INTEGER PRIMARY KEY,
-        date_id INTEGER,
-        home_team_id INTEGER,
-        away_team_id INTEGER,
-        arena_id INTEGER,
-        game_datetime_est TIMESTAMP,
-        game_type VARCHAR(50),
-        game_subtype VARCHAR(50),
-        game_label VARCHAR(100),
-        game_sublabel VARCHAR(100),
-        series_game_number INTEGER,
-        series_text VARCHAR(100),
-        week_number INTEGER,
-        officials VARCHAR(255),
-        status INTEGER,
-        FOREIGN KEY (date_id) REFERENCES dim_date(date_id),
-        FOREIGN KEY (home_team_id) REFERENCES dim_team(team_id),
-        FOREIGN KEY (away_team_id) REFERENCES dim_team(team_id),
-        FOREIGN KEY (arena_id) REFERENCES dim_arena(arena_id)
-    );
+        CREATE OR REPLACE TABLE dim_game (
+            game_id INTEGER PRIMARY KEY,
+            date_id INTEGER,
+            home_team_id INTEGER,
+            away_team_id INTEGER,
+            winner_team_id INTEGER,
+            arena_id INTEGER,
+            game_date_time_est TIMESTAMP,
+            game_type VARCHAR(50),
+            game_sub_type VARCHAR(50),
+            game_label VARCHAR(100),
+            game_sub_label VARCHAR(100),
+            game_sequence VARCHAR(20),
+            series_game_number VARCHAR(10),
+            series_text VARCHAR(100),
+            week_number INTEGER,
+            officials VARCHAR(255),
+            season VARCHAR(20),
+            status VARCHAR(20),
+        );
     """)
+
+    conn.execute("""
+        INSERT INTO dim_game (
+            game_id,
+            date_id,
+            home_team_id,
+            away_team_id,
+            winner_team_id,
+            arena_id,
+            game_date_time_est,
+            game_type,
+            game_sub_type,
+            game_label,
+            game_sub_label,
+            game_sequence,
+            series_game_number,
+            series_text,
+            week_number,
+            officials,
+            season,
+            status
+        )
+        SELECT 
+            COALESCE(s.game_id, g.game_id) AS game_id, 
+            COALESCE(
+                CAST(STRFTIME(s.game_date_time_est, '%Y%m%d') AS INTEGER),
+                CAST(STRFTIME(g.game_date_time_est, '%Y%m%d') AS INTEGER),
+                -1
+            ) AS date_id, 
+            COALESCE(s.home_team_id, g.home_team_id) AS home_team_id, 
+            COALESCE(s.away_team_id, g.away_team_id) AS away_team_id, 
+            g.winner_team_id,
+            g.arena_id,
+            COALESCE(s.game_date_time_est, g.game_date_time_est) AS game_date_time_est,
+            g.game_type,
+            COALESCE(s.game_sub_type, g.game_sub_type) AS game_sub_type,
+            COALESCE(s.game_label, g.game_label) AS game_label,
+            COALESCE(s.game_sub_label, g.game_sub_label) AS game_sub_label,
+            s.game_sequence,
+            COALESCE(s.series_game_number, g.series_game_number) AS series_game_number,
+            s.series_text,
+            s.week_number,
+            g.officials,
+            s.season,
+            CASE
+                WHEN g.home_score IS NOT NULL 
+                    AND g.away_score IS NOT NULL
+                    AND g.winner_team_id IS NOT NULL 
+                    THEN 'completed'
+                WHEN COALESCE(s.game_date_time_est, CAST(g.game_date_time_est AS TIMESTAMP)) > CURRENT_TIMESTAMP THEN 'scheduled'
+                WHEN COALESCE(s.game_date_time_est, CAST(g.game_date_time_est AS TIMESTAMP)) <= CURRENT_TIMESTAMP 
+                    AND g.home_score IS NULL THEN 'postponed / awaiting score'
+                ELSE 'unknown'
+            END AS status
+        FROM stag_schedules s
+        FULL OUTER JOIN stag_games g
+        ON s.game_id = g.game_id
+        WHERE s.game_id IS NOT NULL OR g.game_id IS NOT NULL
+        ON CONFLICT (game_id) DO UPDATE SET 
+            date_id = EXCLUDED.date_id,
+            home_team_id = EXCLUDED.home_team_id,
+            away_team_id = EXCLUDED.away_team_id,
+            winner_team_id = COALESCE(EXCLUDED.winner_team_id, dim_game.winner_team_id),
+            arena_id  = COALESCE(EXCLUDED.arena_id, dim_game.arena_id),
+            game_date_time_est = EXCLUDED.game_date_time_est,
+            game_type  = COALESCE(EXCLUDED.game_type, dim_game.game_type),
+            game_sub_type = EXCLUDED.game_sub_type,
+            game_label = EXCLUDED.game_label,
+            game_sub_label= EXCLUDED.game_sub_label,
+            game_sequence= EXCLUDED.game_sequence,
+            series_game_number = EXCLUDED.series_game_number,
+            series_text  = EXCLUDED.series_text,
+            week_number= EXCLUDED.week_number,
+            officials= COALESCE(EXCLUDED.officials, dim_game.officials),
+            season = EXCLUDED.season,
+            status = EXCLUDED.status;
+    """)
+
+    count = conn.execute("SELECT COUNT(*) FROM dim_game").fetchone()[0]
+    print(f"Tổng số tran dau trong dim_game: {count}")
+
+    data_table = conn.execute("SELECT * FROM dim_game").fetchall()
+
+    print(data_table)
+    conn.close()
+
+insert_into_dim_game()

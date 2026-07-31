@@ -27,7 +27,7 @@ def build_stg_games():
         CREATE OR REPLACE TABLE stag_games AS
         SELECT 
             TRY_CAST(gameId AS INTEGER) AS game_id,
-            TRY_CAST(gameDateTimeEst AS DATE) AS game_date_time_est,
+            TRY_CAST(gameDateTimeEst AS TIMESTAMP) AS game_date_time_est,
             NULLIF(TRIM(hometeamCity), '') AS home_team_city,
             NULLIF(TRIM(hometeamName), '') AS home_team_name,
             TRY_CAST(hometeamId AS INTEGER) AS home_team_id,
@@ -44,6 +44,7 @@ def build_stg_games():
             NULLIF(TRIM(seriesGameNumber), '') AS series_game_number,
             TRY_CAST(attendance AS INTEGER) AS attendance,
             TRY_CAST(arenaId as INTEGER) AS arena_id,
+            NULLIF(arenaName, '') AS arena_name,
             NULLIF(TRIM(arenaCity), '') AS arena_city,
             NULLIF(TRIM(arenaState), '') AS arena_state,
             NULLIF(TRIM(officials), '') AS officials,
@@ -55,6 +56,8 @@ def build_stg_games():
     """).fetchone()[0]
 
     print(f"Data in game stag table: {stagin_count}")
+
+build_stg_games()
 
 def build_stg_schedules():
     duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
