@@ -266,13 +266,13 @@ def build_stg_player_stats():
             TRY_CAST(assists AS INTEGER) AS assists,
             TRY_CAST(blocks AS INTEGER) AS blocks,
             TRY_CAST(steals AS INTEGER) AS steals,
-            TRY_CAST(fieldGoalsAttempted AS INTEGER) AS field_goals_attemped,
+            TRY_CAST(fieldGoalsAttempted AS INTEGER) AS field_goals_attempted,
             TRY_CAST(fieldGoalsMade AS INTEGER) AS field_goals_made,
             TRY_CAST(fieldGoalsPercentage AS DOUBLE) AS field_goals_percentage,
-            TRY_CAST(threePointersAttempted AS INTEGER) AS three_pointers_attemped,
+            TRY_CAST(threePointersAttempted AS INTEGER) AS three_pointers_attempted,
             TRY_CAST(threePointersMade AS INTEGER) AS three_pointers_made,
             TRY_CAST(threePointersPercentage AS DOUBLE) AS three_pointers_percentage,
-            TRY_CAST(freeThrowsAttempted AS INTEGER) AS free_throws_attemped,
+            TRY_CAST(freeThrowsAttempted AS INTEGER) AS free_throws_attempted,
             TRY_CAST(freeThrowsMade AS INTEGER) AS free_throws_made,
             TRY_CAST(freeThrowsPercentage AS DOUBLE) AS free_throws_percentage,
             TRY_CAST(reboundsDefensive AS INTEGER) AS rebounds_defensive,
@@ -293,6 +293,8 @@ def build_stg_player_stats():
     stag_count = conn.execute("SELECT COUNT(*) FROM stg_player_stats").fetchone()[0]
 
     print(f"Data in stag player stats table: {stag_count}")
+
+build_stg_player_stats()
 
 def build_stg_team_stats():
     duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'

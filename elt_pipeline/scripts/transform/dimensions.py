@@ -387,6 +387,59 @@ def insert_into_dim_game():
     """)
 
     conn.execute("""
+        CREATE OR REPLACE TABLE quarantine_game (
+            game_id INTEGER,
+            game_date_time_est TIMESTAMP,
+            home_team_id INTEGER,
+            away_team_id INTEGER,
+            home_score INTEGER,
+            away_score INTEGER,
+            winner_team_id INTEGER,
+            error_reason VARCHAR(255),
+            quarantined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.execute("""
+        INSERT INTO quarantine_game (
+            game_id, 
+            game_date_time_est, 
+            home_team_id, 
+            away_team_id, 
+            home_score, 
+            away_score, 
+            winner_team_id, 
+            error_reason
+        )
+        SELECT 
+            g.game_id,
+            COALESCE(s.game_date_time_est, g.game_date_time_est),
+            COALESCE(s.home_team_id, g.home_team_id),
+            COALESCE(s.away_team_id, g.away_team_id),
+            g.home_score,
+            g.away_score,
+            g.winner_team_id,
+            CASE
+                WHEN g.home_score < 0 OR g.away_score < 0 
+                    THEN 'Negative Score'
+                WHEN g.winner_team_id IS NOT NULL AND g.winner_team_id NOT IN (COALESCE(s.home_team_id, g.home_team_id), COALESCE(s.away_team_id, g.away_team_id)) 
+                    THEN 'Winner team is not a home or away team'
+                WHEN g.home_score > g.away_score AND g.winner_team_id <> COALESCE(s.home_team_id, g.home_team_id) 
+                    THEN 'The home team with leader score not a winner'
+                WHEN g.away_score > g.home_score AND g.winner_team_id <> COALESCE(s.away_team_id, g.away_team_id) 
+                    THEN 'The away team with leader score not a winner'
+                ELSE 'Unknown Error'
+            END AS error_reason
+        FROM stag_games g
+        FULL OUTER JOIN stag_schedules s ON g.game_id = s.game_id
+        WHERE 
+            g.home_score < 0 OR g.away_score < 0
+            OR (g.winner_team_id IS NOT NULL AND g.winner_team_id NOT IN (COALESCE(s.home_team_id, g.home_team_id), COALESCE(s.away_team_id, g.away_team_id)))
+            OR (g.home_score > g.away_score AND g.winner_team_id <> COALESCE(s.home_team_id, g.home_team_id))
+            OR (g.away_score > g.home_score AND g.winner_team_id <> COALESCE(s.away_team_id, g.away_team_id));
+    """)
+
+    conn.execute("""
         INSERT INTO dim_game (
             game_id,
             date_id,
@@ -442,7 +495,9 @@ def insert_into_dim_game():
         FROM stag_schedules s
         FULL OUTER JOIN stag_games g
         ON s.game_id = g.game_id
-        WHERE s.game_id IS NOT NULL OR g.game_id IS NOT NULL
+        WHERE COALESCE(s.game_id, g.game_id) NOT IN (
+            SELECT game_id FROM quarantine_game
+        )
         ON CONFLICT (game_id) DO UPDATE SET 
             date_id = EXCLUDED.date_id,
             home_team_id = EXCLUDED.home_team_id,
