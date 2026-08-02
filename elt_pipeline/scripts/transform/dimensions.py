@@ -526,4 +526,4 @@ def insert_into_dim_game():
     print(data_table)
     conn.close()
 
-insert_into_dim_game()
+insert_into_dim_date()
