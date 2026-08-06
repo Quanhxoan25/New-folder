@@ -4,7 +4,7 @@ import json
 import os
 
 def crawl_team_statistics():
-    csv_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\assets\data\TeamStatistics.csv"
+    csv_path = "/opt/airflow/assets/data/TeamStatistics.csv"
 
     df = pd.read_csv(csv_path)
 
@@ -13,7 +13,7 @@ def crawl_team_statistics():
     list_team_stats = df.to_dict(orient="records")
 
     date = datetime.date.today().strftime("%Y_%m_%d")
-    path = f"D:/HocTap/DATA ENGINEERS/Project/New folder/elt_pipeline/data/raw/team_stats\crawl_team_stats_{date}.json"
+    path = f"/opt/airflow/elt_pipeline/data/raw/team_stats/crawl_team_stats_{date}.json"
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
 

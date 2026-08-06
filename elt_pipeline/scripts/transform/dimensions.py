@@ -1,7 +1,7 @@
 import duckdb
 
 def insert_into_dim_country():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -29,7 +29,7 @@ def insert_into_dim_country():
     conn.close()
 
 def insert_into_dim_school():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -56,7 +56,7 @@ def insert_into_dim_school():
     conn.close()
 
 def insert_into_dim_city():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""   
@@ -83,7 +83,7 @@ def insert_into_dim_city():
     conn.close()
 
 def insert_into_dim_league():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -111,7 +111,7 @@ def insert_into_dim_league():
     conn.close()
 
 def insert_into_dim_date():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -142,7 +142,7 @@ def insert_into_dim_date():
     conn.close()
 
 def insert_into_dim_arena():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -182,11 +182,11 @@ def insert_into_dim_arena():
     conn.close()
 
 def insert_into_dim_players():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS dim_players (
+        CREATE OR REPLACE TABLE dim_players (
             player_id INTEGER PRIMARY KEY,
             country_id INTEGER,
             school_id INTEGER,
@@ -203,8 +203,6 @@ def insert_into_dim_players():
             games_played_flag BOOLEAN,
             from_year INTEGER,
             to_year INTEGER,
-            FOREIGN KEY (country_id) REFERENCES dim_country(country_id),
-            FOREIGN KEY (school_id) REFERENCES dim_school(school_id)
         );
     """)
 
@@ -255,7 +253,6 @@ def insert_into_dim_players():
                     ORDER BY to_year DESC NULLS LAST, from_year DESC NULLS LAST
                 ) AS rn
             FROM stg_players
-            WHERE person_id IS NOT NULL
         )
         SELECT 
             player_id,
@@ -296,13 +293,10 @@ def insert_into_dim_players():
     count = conn.execute("SELECT COUNT(*) FROM dim_players").fetchone()[0]
     print(f"Tổng số cau thu trong dim_players: {count}")
 
-    data_table = conn.execute("SELECT * FROM dim_players").fetchall()
-
-    print(data_table)
     conn.close()
 
 def insert_into_dim_team():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -315,8 +309,6 @@ def insert_into_dim_team():
             team_abbrev VARCHAR(10),
             season_founded VARCHAR(20),
             season_active_till VARCHAR(20),
-            FOREIGN KEY (league_id) REFERENCES dim_league(league_id),
-            FOREIGN KEY (city_id) REFERENCES dim_city(city_id)
         );
     """)
 
@@ -353,14 +345,10 @@ def insert_into_dim_team():
     """)
     count = conn.execute("SELECT COUNT(*) FROM dim_team").fetchone()[0]
     print(f"Tổng số doi bong trong dim_team: {count}")
-
-    data_table = conn.execute("SELECT * FROM dim_team").fetchall()
-
-    print(data_table)
     conn.close()
 
 def insert_into_dim_game():
-    duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -520,10 +508,4 @@ def insert_into_dim_game():
 
     count = conn.execute("SELECT COUNT(*) FROM dim_game").fetchone()[0]
     print(f"Tổng số tran dau trong dim_game: {count}")
-
-    data_table = conn.execute("SELECT * FROM dim_game").fetchall()
-
-    print(data_table)
     conn.close()
-
-insert_into_dim_date()

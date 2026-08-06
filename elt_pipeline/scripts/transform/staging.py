@@ -3,7 +3,7 @@ import duckdb
 def build_stg_games():
     duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
-
+    conn.execute("INSTALL httpfs;")
     conn.execute("LOAD httpfs")
 
     conn.execute("""
@@ -12,7 +12,7 @@ def build_stg_games():
             PROVIDER config,
                 KEY_ID 'minioadmin',
                     SECRET 'minioadminpassword',
-                    ENDPOINT 'localhost:9000',
+                    ENDPOINT 'minio:9000',
                     REGION 'us-east-1',
                     URL_STYLE 'path',
                     USE_SSL false
@@ -57,8 +57,6 @@ def build_stg_games():
 
     print(f"Data in game stag table: {stagin_count}")
 
-build_stg_games()
-
 def build_stg_schedules():
     duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
@@ -71,7 +69,7 @@ def build_stg_schedules():
             PROVIDER config,
                 KEY_ID 'minioadmin',
                     SECRET 'minioadminpassword',
-                    ENDPOINT 'localhost:9000',
+                    ENDPOINT 'minio:9000',
                     REGION 'us-east-1',
                     URL_STYLE 'path',
                     USE_SSL false
@@ -109,8 +107,6 @@ def build_stg_schedules():
     stag_count = conn.execute("SELECT COUNT(*) FROM stag_schedules").fetchone()[0]
     print(f"Data in schedule stag table: {stag_count}")
 
-build_stg_schedules()
-
 def build_stg_players():
     duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
@@ -123,7 +119,7 @@ def build_stg_players():
             PROVIDER config,
                 KEY_ID 'minioadmin',
                     SECRET 'minioadminpassword',
-                    ENDPOINT 'localhost:9000',
+                    ENDPOINT 'minio:9000',
                     REGION 'us-east-1',
                     URL_STYLE 'path',
                     USE_SSL false
@@ -182,7 +178,7 @@ def build_stg_teams():
             PROVIDER config,
                 KEY_ID 'minioadmin',
                     SECRET 'minioadminpassword',
-                    ENDPOINT 'localhost:9000',
+                    ENDPOINT 'minio:9000',
                     REGION 'us-east-1',
                     URL_STYLE 'path',
                     USE_SSL false
@@ -229,7 +225,7 @@ def build_stg_player_stats():
             PROVIDER config,
                 KEY_ID 'minioadmin',
                     SECRET 'minioadminpassword',
-                    ENDPOINT 'localhost:9000',
+                    ENDPOINT 'minio:9000',
                     REGION 'us-east-1',
                     URL_STYLE 'path',
                     USE_SSL false
@@ -245,56 +241,67 @@ def build_stg_player_stats():
 
     conn.execute(f"""
         CREATE OR REPLACE TABLE stg_player_stats AS
-        SELECT 
-            NULLIF(TRIM(firstName), '') AS first_name,
-            NULLIF(TRIM(lastName), '') AS last_name,
-            TRY_CAST(personId AS INTEGER) AS person_id,
-            TRY_CAST(gameId AS INTEGER) AS game_id,
-            TRY_CAST(gameDateTimeEst AS TIMESTAMP) AS game_date_time_est,
-            NULLIF(TRIM(playerteamCity), '') AS player_team_city,
-            NULLIF(TRIM(playerteamName), '') AS player_team_name,
-            NULLIF(TRIM(opponentteamCity), '') AS opponent_team_city,
-            NULLIF(TRIM(opponentteamName), '') AS opponent_team_name,
-            NULLIF(TRIM(gameType), '') AS game_type,
-            NULLIF(TRIM(gameLabel), '') AS game_label,
-            NULLIF(TRIM(gameSubLabel), '') AS game_sub_label,
-            TRY_CAST(seriesGameNumber AS INTEGER) AS series_game_number,
-            win <> 0 AS win,
-            home <> 0 AS home,
-            TRY_CAST(numMinutes AS INTEGER) AS num_minutes,
-            TRY_CAST(points AS INTEGER) AS points,
-            TRY_CAST(assists AS INTEGER) AS assists,
-            TRY_CAST(blocks AS INTEGER) AS blocks,
-            TRY_CAST(steals AS INTEGER) AS steals,
-            TRY_CAST(fieldGoalsAttempted AS INTEGER) AS field_goals_attempted,
-            TRY_CAST(fieldGoalsMade AS INTEGER) AS field_goals_made,
-            TRY_CAST(fieldGoalsPercentage AS DOUBLE) AS field_goals_percentage,
-            TRY_CAST(threePointersAttempted AS INTEGER) AS three_pointers_attempted,
-            TRY_CAST(threePointersMade AS INTEGER) AS three_pointers_made,
-            TRY_CAST(threePointersPercentage AS DOUBLE) AS three_pointers_percentage,
-            TRY_CAST(freeThrowsAttempted AS INTEGER) AS free_throws_attempted,
-            TRY_CAST(freeThrowsMade AS INTEGER) AS free_throws_made,
-            TRY_CAST(freeThrowsPercentage AS DOUBLE) AS free_throws_percentage,
-            TRY_CAST(reboundsDefensive AS INTEGER) AS rebounds_defensive,
-            TRY_CAST(reboundsOffensive AS INTEGER) AS rebounds_offensive,
-            TRY_CAST(reboundsTotal AS INTEGER) AS rebounds_total,
-            TRY_CAST(foulsPersonal AS INTEGER) AS fouls_personal,
-            TRY_CAST(turnovers AS INTEGER) AS turnovers,
-            TRY_CAST(plusMinusPoints AS DOUBLE) AS plus_minus_points,
-            TRY_CAST(playerteamId AS INTEGER) AS player_team_id,
-            TRY_CAST(opponentteamId AS INTEGER) AS opponent_team_id,
-            NULLIF(TRIM(comment), '') AS comment,
-            NULLIF(TRIM(startingPosition), '') AS starting_position,
-            TRY_CAST(gameDate AS TIMESTAMP) AS game_date
-        FROM read_parquet('{player_stats_path}')
-    """
+            SELECT 
+                -- 1. Xử lý các cột Chuỗi (Lọc bỏ '', 'None', 'nan')
+                NULLIF(NULLIF(TRIM(firstName), ''), 'None') AS first_name,
+                NULLIF(NULLIF(TRIM(lastName), ''), 'None') AS last_name,
+                NULLIF(NULLIF(TRIM(playerteamCity), ''), 'None') AS player_team_city,
+                NULLIF(NULLIF(TRIM(playerteamName), ''), 'None') AS player_team_name,
+                NULLIF(NULLIF(TRIM(opponentteamCity), ''), 'None') AS opponent_team_city,
+                NULLIF(NULLIF(TRIM(opponentteamName), ''), 'None') AS opponent_team_name,
+                NULLIF(NULLIF(TRIM(gameType), ''), 'None') AS game_type,
+                NULLIF(NULLIF(TRIM(gameLabel), ''), 'None') AS game_label,
+                NULLIF(NULLIF(TRIM(gameSubLabel), ''), 'None') AS game_sub_label,
+                NULLIF(NULLIF(TRIM(comment), ''), 'None') AS comment,
+                NULLIF(NULLIF(TRIM(startingPosition), ''), 'None') AS starting_position,
+
+                -- 2. Xử lý ID & Thời gian
+                TRY_CAST(personId AS INTEGER) AS person_id,
+                TRY_CAST(gameId AS INTEGER) AS game_id,
+                TRY_CAST(gameDateTimeEst AS TIMESTAMP) AS game_date_time_est,
+                TRY_CAST(gameDate AS TIMESTAMP) AS game_date,
+
+                -- 3. Xử lý Boolean / Win / Home
+                COALESCE(TRY_CAST(NULLIF(win, 'None') AS INTEGER), 0) AS win,
+                COALESCE(TRY_CAST(NULLIF(home, 'None') AS INTEGER), 0) AS home,
+
+                -- 4. Xử lý Phút thi đấu (An toàn cho dạng "35:12" lẫn "35.5")
+                TRY_CAST(SPLIT_PART(numMinutes, ':', 1) AS DOUBLE) AS num_minutes,
+
+                -- 5. Xử lý các chỉ số thống kê trận đấu (Stats)
+                TRY_CAST(seriesGameNumber AS INTEGER) AS series_game_number,
+                TRY_CAST(points AS INTEGER) AS points,
+                TRY_CAST(assists AS INTEGER) AS assists,
+                TRY_CAST(blocks AS INTEGER) AS blocks,
+                TRY_CAST(steals AS INTEGER) AS steals,
+                TRY_CAST(fieldGoalsAttempted AS INTEGER) AS field_goals_attempted,
+                TRY_CAST(fieldGoalsMade AS INTEGER) AS field_goals_made,
+                TRY_CAST(fieldGoalsPercentage AS DOUBLE) AS field_goals_percentage,
+                TRY_CAST(threePointersAttempted AS INTEGER) AS three_pointers_attempted,
+                TRY_CAST(threePointersMade AS INTEGER) AS three_pointers_made,
+                TRY_CAST(threePointersPercentage AS DOUBLE) AS three_pointers_percentage,
+                TRY_CAST(freeThrowsAttempted AS INTEGER) AS free_throws_attempted,
+                TRY_CAST(freeThrowsMade AS INTEGER) AS free_throws_made,
+                TRY_CAST(freeThrowsPercentage AS DOUBLE) AS free_throws_percentage,
+                TRY_CAST(reboundsDefensive AS INTEGER) AS rebounds_defensive,
+                TRY_CAST(reboundsOffensive AS INTEGER) AS rebounds_offensive,
+                TRY_CAST(reboundsTotal AS INTEGER) AS rebounds_total,
+                TRY_CAST(foulsPersonal AS INTEGER) AS fouls_personal,
+                TRY_CAST(turnovers AS INTEGER) AS turnovers,
+                TRY_CAST(plusMinusPoints AS DOUBLE) AS plus_minus_points,
+
+                -- 6. Đồng bộ Team IDs (Gán mặc định 0 nếu thiếu)
+                COALESCE(TRY_CAST(NULLIF(playerteamId, 'None') AS INTEGER), 0) AS player_team_id,
+                COALESCE(TRY_CAST(NULLIF(opponentteamId, 'None') AS INTEGER), 0) AS opponent_team_id
+
+            FROM read_parquet('{player_stats_path}', union_by_name=True);
+                """
     )
 
     stag_count = conn.execute("SELECT COUNT(*) FROM stg_player_stats").fetchone()[0]
 
     print(f"Data in stag player stats table: {stag_count}")
 
-build_stg_player_stats()
 
 def build_stg_team_stats():
     duckdb_path = r'D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb'
@@ -308,7 +315,7 @@ def build_stg_team_stats():
             PROVIDER config,
                 KEY_ID 'minioadmin',
                     SECRET 'minioadminpassword',
-                    ENDPOINT 'localhost:9000',
+                    ENDPOINT 'minio:9000',
                     REGION 'us-east-1',
                     URL_STYLE 'path',
                     USE_SSL false
@@ -387,6 +394,3 @@ def build_stg_team_stats():
     stag_count = conn.execute("SELECT COUNT(*) FROM stg_team_stats").fetchone()[0]
     
     print(f"Data in stag player stats table: {stag_count}")
-
-
-build_stg_teams()

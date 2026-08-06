@@ -1,43 +1,115 @@
 version: '3.8'
 
 services:
-    postgres_dw: 
-        image: postgres:15
-        container_name: postgres_dw_container
-        environment:
-            POSTGRES_USER: postgres_user
-            POSTGRES_PASSWORD: postgres_password
-            POSTGRES_DB: nba_dw
-        ports:
-            - "5432:5432"
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
+  postgres_dw: 
+    image: postgres:15
+    container_name: postgres_dw_container
+    environment:
+      POSTGRES_USER: postgres_user
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: nba_dw
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-    pgadmin:
-        image: dpage/pgadmin4:latest
-        container_name: nba_pgadmin
-        restart: always
-        environment:
-            PGADMIN_DEFAULT_EMAIL: admin@admin.com
-            PGADMIN_DEFAULT_PASSWORD: adminpassword
-        ports:
-            - "5050:80"
-        depends_on:
-            - postgres_dw
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nba_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: adminpassword
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres_dw
 
-    minio:
-        image: minio/minio:latest
-        container_name: minio_datalake
-        ports:
-            - "9000:9000" 
-            - "9001:9001" 
-        environment:
-            MINIO_ROOT_USER: "minioadmin"
-            MINIO_ROOT_PASSWORD: "minioadminpassword"
-        volumes:
-            - ./minio_data:/data # Lưu dữ liệu thực tế vào máy local
-        command: server /data --console-address ":9001"
+  minio:
+    image: minio/minio:latest
+    container_name: minio_datalake
+    ports:
+      - "9000:9000" 
+      - "9001:9001" 
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadminpassword"
+    volumes:
+      - ./minio_data:/data
+    command: server /data --console-address ":9001"
+
+  airflow-postgres:
+    image: postgres:15
+    container_name: airflow_postgres_meta
+    restart: always
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow_password
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-webserver:
+    image: apache/airflow:2.10.0
+    container_name: airflow_webserver
+    restart: always
+    command: webserver # <--- BỔ SUNG: Chỉ định rõ chạy webserver
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy # <--- Chờ Postgres thật sự sẵn sàng
+      postgres_dw:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow_password@airflow-postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: 'admin'
+      _AIRFLOW_WWW_USER_PASSWORD: 'adminpassword'
+      _PIP_ADDITIONAL_REQUIREMENTS: "duckdb pandas minio"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./elt_pipeline:/opt/airflow/elt_pipeline    
+      - ./warehouse:/opt/airflow/warehouse         
+      - ./sql:/opt/airflow/sql
+      - "D:/HocTap/DATA ENGINEERS/Project/New folder/assets/data:/opt/airflow/assets/data"
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.0
+    container_name: airflow_scheduler
+    restart: always
+    command: scheduler # <--- BỔ SUNG: Chỉ định rõ chạy scheduler
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-webserver:
+        condition: service_started
+    environment:
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow_password@airflow-postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      _PIP_ADDITIONAL_REQUIREMENTS: "duckdb pandas minio"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./elt_pipeline:/opt/airflow/elt_pipeline    
+      - ./warehouse:/opt/airflow/warehouse          
+      - ./sql:/opt/airflow/sql
+      - "D:/HocTap/DATA ENGINEERS/Project/New folder/assets/data:/opt/airflow/assets/data"
 
 volumes:
   postgres_data:
-
+  airflow_postgres_data:

@@ -4,8 +4,7 @@ import json
 import os
 
 def crawl_schedule ():
-    csv_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\assets\data\schedules_unifield.csv"
-
+    csv_path = "/opt/airflow/assets/data/schedules_unifield.csv"
     df = pd.read_csv(csv_path)
 
     print("Start reading schedule file")
@@ -13,7 +12,7 @@ def crawl_schedule ():
     list_schedule = df.to_dict(orient="records")
     
     date = datetime.date.today().strftime("%Y_%m_%d")
-    path = f"D:/HocTap/DATA ENGINEERS/Project/New folder/elt_pipeline/data/raw/schedule/crawl_schedule_{date}.json"
+    path = f"/opt/airflow/elt_pipeline/data/raw/schedule/crawl_schedule_{date}.json"
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     json_object = json.dumps(list_schedule, indent=4, ensure_ascii=False)

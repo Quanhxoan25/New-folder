@@ -15,17 +15,17 @@ def query_to_parquet(query, engine, parquet_file_path):
 
 def load_db_team_tb_to_parquet():
     DATABASE_TYPE = 'postgresql'
-    ENDPOINT = 'localhost'
+    ENDPOINT = 'postgres_dw'
     USER = 'postgres_user'
     PASSWORD = 'postgres_password'
     PORT = 5432
     DATABASE = 'nba_dw'
 
     engine = create_engine(f"{DATABASE_TYPE}://{USER}:{PASSWORD}@{ENDPOINT}:{PORT}/{DATABASE}")
-    query_file_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\elt_pipeline\scripts\extract\extract_db_teams_tb_to_parquet.sql"
+    query_file_path = "/opt/airflow/elt_pipeline/scripts/extract/extract_db_teams_tb_to_parquet.sql"
 
     date = datetime.date.today().strftime("%Y_%m_%d")
-    parquet_file_path = f"D:/HocTap/DATA ENGINEERS/Project/New folder/elt_pipeline/data/completed/load_db_to_dl/load_team_tb_to_dl/load_db_team_tb_to_dl_{date}.parquet"
+    parquet_file_path = f"/opt/airflow/elt_pipeline/data/completed/load_db_to_dl/load_team_tb_to_dl/load_db_team_tb_to_dl_{date}.parquet"
 
     os.makedirs(os.path.dirname(parquet_file_path), exist_ok=True)
 

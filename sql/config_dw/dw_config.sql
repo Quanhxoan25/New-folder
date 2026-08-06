@@ -96,7 +96,6 @@ CREATE OR REPLACE TABLE fact_team_statistics (
     team_id INTEGER,
     opponent_team_id INTEGER,
     coach_id INTEGER,
-    game_id INTEGER,
     home BOOLEAN,
     win BOOLEAN,
     seed INT,
@@ -141,7 +140,8 @@ CREATE OR REPLACE TABLE fact_team_statistics (
     times_tied INT,
     timeouts_remaining INT,
     season_wins INT,
-    season_losses INT
+    season_losses INT,
+    PRIMARY KEY (game_id, team_id)
 );
 
 CREATE TABLE IF NOT EXISTS fact_team_statistics (

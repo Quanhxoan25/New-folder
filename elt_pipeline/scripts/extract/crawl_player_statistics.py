@@ -1,26 +1,37 @@
-import pandas as pd
 import datetime
-import json
 import os
+import pandas as pd
+
 
 def crawl_player_statistics():
-    csv_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\assets\data\PlayerStatistics.csv"
-
-    df = pd.read_csv(csv_path)
-
+    # 1. Đường dẫn hợp lệ bên trong Docker Container
+    csv_path = "/opt/airflow/assets/data/PlayerStatistics.csv"
     print("Start reading player statistics file")
 
-    list_player_stats = df.to_dict(orient="records")
-
     date = datetime.date.today().strftime("%Y_%m_%d")
-    path = f"D:/HocTap/DATA ENGINEERS/Project/New folder/elt_pipeline/data/raw/player_stats\crawl_player_stats_{date}.json"
+    path = f"/opt/airflow/elt_pipeline/data/raw/player_stats/crawl_player_stats_{date}.json"
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
-    json_object = json.dumps(list_player_stats, indent=4, ensure_ascii=False)
+    chunk_size = 20000
 
-    with open (path, "w", encoding="utf-8") as file:
-        file.write(json_object)
-    print (f"Data save to {path}")
+    # Ghi file dạng JSON Lines
+    with open(path, "w", encoding="utf-8") as file:
+        for chunk in pd.read_csv(
+            csv_path,  # 👈 Đã sửa: Dùng biến csv_path thay vì đường dẫn D:\ của Windows
+            chunksize=chunk_size,
+            low_memory=False,
+            dtype=str,  # Ép kiểu str để tránh lỗi xung đột datatype
+        ):
+            chunk.to_json(file, orient="records", lines=True, force_ascii=False)
+
+    print(f"Data saved to {path}")
+
+    # 2. Đọc kiểm tra: Thêm lines=True và nrows=5 để KHÔNG nạp toàn bộ file vào RAM
+    data = pd.read_json(path, lines=True, nrows=5)
+    print(data)
+    
+    
+
 
 crawl_player_statistics()

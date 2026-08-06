@@ -1,7 +1,7 @@
 import duckdb
 
 def insert_into_fact_player_statistics ():
-    duckdb_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb"
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -258,7 +258,7 @@ def insert_into_fact_player_statistics ():
     print(f"{fact_table} = {stag_table} - {quarantive_table}")
 
 def insert_into_fact_team_statistics():
-    duckdb_path = r"D:\HocTap\DATA ENGINEERS\Project\New folder\warehouse\datawarehouse.duckdb"
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
     conn = duckdb.connect(duckdb_path)
 
     conn.execute("""
@@ -267,7 +267,6 @@ def insert_into_fact_team_statistics():
             team_id INTEGER,
             opponent_team_id INTEGER,
             coach_id INTEGER,
-            game_id INTEGER,
             home BOOLEAN,
             win BOOLEAN,
             seed INT,
@@ -278,7 +277,6 @@ def insert_into_fact_team_statistics():
             assists INT,
             blocks INT,
             steals INT,
-            turnovers  INT,
             turnovers_team INT,
             fouls_personal INT,
             field_goals_attempted INT,
@@ -293,6 +291,57 @@ def insert_into_fact_team_statistics():
             rebounds_defensive INT,
             rebounds_offensive INT,
             rebounds_total INT,
+            q1_points INT,
+            q2_points INT,
+            q3_points INT,
+            q4_points INT,
+            ot1_points INT,
+            ot2_points INT,
+            ot_all_points INT,
+            bench_points INT,
+            points_fast_break INT,
+            points_from_turnovers INT,
+            points_in_the_paint INT,
+            points_second_chance INT,
+            biggest_lead INT,
+            biggest_scoring_run INT,
+            lead_changes INT,
+            times_tied INT,
+            timeouts_remaining INT,
+            season_wins INT,
+            season_losses INT,
+            PRIMARY KEY (game_id, team_id)
+        );
+    """)
+
+    conn.execute("""
+        CREATE OR REPLACE TABLE quarantine_team_stats (
+            game_id INTEGER,
+            team_id INTEGER,
+            opponent_team_id INTEGER,
+            home BOOLEAN,
+            win BOOLEAN,
+            seed INT,
+            team_score INT,
+            opponent_score INT,
+            plus_minus_points DOUBLE,
+            num_minutes INT,
+            assists INT,
+            blocks INT,
+            steals INT,
+            turnovers_team INT,
+            fouls_personal INT,
+            field_goals_attempted INT,
+            field_goals_made INT,
+            field_goals_percentage DOUBLE,
+            three_pointers_attempted INT,
+            three_pointers_made INT,
+            three_pointers_percentage DOUBLE,
+            free_throws_attempted INT,
+            free_throws_made INT,
+            free_throws_percentage DOUBLE,
+            rebounds_defensive INT,
+            rebounds_offensive INT,
             rebounds_team INT,
             q1_points INT,
             q2_points INT,
@@ -312,6 +361,334 @@ def insert_into_fact_team_statistics():
             times_tied INT,
             timeouts_remaining INT,
             season_wins INT,
-            season_losses INT
+            season_losses INT, 
+            error_reports VARCHAR(255)
         );
     """)
+
+    conn.execute("""    
+        INSERT INTO quarantine_team_stats (
+            game_id ,
+            team_id ,
+            opponent_team_id,
+            home ,
+            win,
+            seed,
+            team_score,
+            opponent_score,
+            plus_minus_points ,
+            num_minutes,
+            assists,
+            blocks,
+            steals,
+            turnovers_team,
+            fouls_personal,
+            field_goals_attempted,
+            field_goals_made,
+            field_goals_percentage ,
+            three_pointers_attempted,
+            three_pointers_made,
+            three_pointers_percentage ,
+            free_throws_attempted,
+            free_throws_made,
+            free_throws_percentage,
+            rebounds_defensive,
+            rebounds_offensive,
+            rebounds_team,
+            q1_points,
+            q2_points,
+            q3_points,
+            q4_points,
+            ot1_points,
+            ot2_points,
+            ot_all_points,
+            bench_points,
+            points_fast_break,
+            points_from_turnovers,
+            points_in_the_paint,
+            points_second_chance,
+            biggest_lead,
+            biggest_scoring_run,
+            lead_changes,
+            times_tied,
+            timeouts_remaining,
+            season_wins,
+            season_losses,
+            error_reports
+        )
+        SELECT 
+            game_id ,
+            team_id ,
+            opponent_team_id,
+            home,
+            win,
+            seed,
+            team_score,
+            opponent_score,
+            plus_minus_points ,
+            num_minutes,
+            assists,
+            blocks,
+            steals,
+            turnovers AS turnovers_team,
+            fouls_personal,
+            field_goals_attempted,
+            field_goals_made,
+            field_goals_percentage ,
+            three_pointers_attempted,
+            three_pointers_made,
+            three_pointers_percentage ,
+            free_throws_attempted,
+            free_throws_made,
+            free_throws_percentage,
+            rebounds_defensive,
+            rebounds_offensive,
+            rebounds_total as rebounds_team,
+            q1_points,
+            q2_points,
+            q3_points,
+            q4_points,
+            ot1_points,
+            ot2_points,
+            ot_all_points,
+            bench_points,
+            points_fast_break,
+            points_from_turnovers,
+            points_in_the_paint,
+            points_second_chance,
+            biggest_lead,
+            biggest_scoring_run,
+            lead_changes,
+            times_tied,
+            timeouts_remaining,
+            season_wins,
+            season_losses,
+            CASE 
+                WHEN game_id IS NULL OR team_id IS NULL OR opponent_team_id IS NULL THEN 'Missing IDs' 
+                WHEN (win = true OR win = 1) AND team_score < opponent_score THEN 'Win logic error' 
+                WHEN seed < 0 OR seed > 10 THEN 'Invalid seed' 
+                WHEN team_score < 0 OR opponent_score < 0 OR assists < 0 OR blocks < 0 OR steals < 0 OR turnovers < 0 OR fouls_personal < 0 
+                    OR field_goals_attempted < 0 OR field_goals_made < 0 OR field_goals_percentage < 0 
+                    OR three_pointers_attempted < 0 OR three_pointers_made < 0 OR three_pointers_percentage < 0 
+                    OR free_throws_attempted < 0 OR free_throws_made < 0 OR free_throws_percentage < 0 
+                    OR rebounds_defensive < 0 OR rebounds_offensive < 0 OR rebounds_total < 0 
+                    OR q1_points < 0 OR q2_points < 0 OR q3_points < 0 OR q4_points < 0 
+                    OR bench_points < 0 OR points_fast_break < 0 OR points_from_turnovers < 0 OR points_in_the_paint < 0 OR points_second_chance < 0 
+                    OR biggest_lead < 0 OR biggest_scoring_run < 0 OR lead_changes < 0 OR times_tied < 0 OR timeouts_remaining < 0 
+                    OR season_wins < 0 OR season_losses < 0 THEN 'Negative metric value'
+                WHEN field_goals_attempted < field_goals_made OR three_pointers_attempted < three_pointers_made OR free_throws_attempted < free_throws_made THEN 'Made exceeds attempted' 
+                WHEN rebounds_total <> (rebounds_defensive + rebounds_offensive) THEN 'Rebound sum mismatch' 
+                WHEN ot_all_points <> (ot1_points + ot2_points) THEN 'OT sum mismatch' 
+                WHEN season_wins > 113 OR season_losses > 113 THEN 'Exceeded max season games' 
+                ELSE 'Unknown'
+            END AS error_reports
+        FROM stg_team_stats 
+        WHERE (game_id IS NULL OR team_id IS NULL OR opponent_team_id IS NULL)
+            OR ((win IS true OR win = 1) AND team_score < opponent_score)
+            OR seed < 0 OR seed > 10 
+            OR team_score < 0
+            OR opponent_score < 0
+            OR assists < 0
+            OR blocks < 0
+            OR steals < 0
+            OR turnovers < 0
+            OR fouls_personal < 0
+            OR field_goals_attempted < 0
+            OR field_goals_made < 0 OR field_goals_attempted < field_goals_made
+            OR field_goals_percentage < 0
+            OR three_pointers_attempted < 0
+            OR three_pointers_made < 0 OR three_pointers_attempted < three_pointers_made
+            OR three_pointers_percentage < 0 
+            OR free_throws_attempted < 0
+            OR free_throws_made < 0 OR free_throws_attempted < free_throws_made
+            OR free_throws_percentage < 0
+            OR rebounds_defensive < 0
+            OR rebounds_offensive < 0
+            OR rebounds_total < 0 OR rebounds_total <> COALESCE(rebounds_defensive, 0) + COALESCE(rebounds_offensive, 0)
+            OR q1_points < 0
+            OR q2_points < 0
+            OR q3_points < 0
+            OR q4_points < 0
+            OR ot_all_points < 0 OR ot_all_points <> COALESCE(ot1_points, 0) + COALESCE(ot2_points, 0)
+            OR bench_points < 0
+            OR points_fast_break < 0
+            OR points_from_turnovers < 0
+            OR points_in_the_paint < 0
+            OR points_second_chance < 0
+            OR biggest_lead < 0
+            OR biggest_scoring_run < 0
+            OR lead_changes < 0
+            OR times_tied < 0
+            OR timeouts_remaining < 0
+            OR season_wins < 0 OR season_wins > 113
+            OR season_losses < 0 OR season_losses > 113;
+    """)
+
+    conn.execute("""
+        INSERT INTO fact_team_statistics (
+            game_id ,
+            team_id ,
+            opponent_team_id ,
+            coach_id ,
+            home ,
+            win ,
+            seed ,
+            team_score ,
+            opponent_score ,
+            plus_minus_points ,
+            num_minutes ,
+            assists ,
+            blocks ,
+            steals ,
+            turnovers_team ,
+            fouls_personal ,
+            field_goals_attempted ,
+            field_goals_made ,
+            field_goals_percentage ,
+            three_pointers_attempted ,
+            three_pointers_made ,
+            three_pointers_percentage ,
+            free_throws_attempted ,
+            free_throws_made ,
+            free_throws_percentage ,
+            rebounds_defensive ,
+            rebounds_offensive ,
+            rebounds_total ,
+            q1_points ,
+            q2_points ,
+            q3_points ,
+            q4_points ,
+            ot1_points ,
+            ot2_points ,
+            ot_all_points ,
+            bench_points ,
+            points_fast_break ,
+            points_from_turnovers ,
+            points_in_the_paint ,
+            points_second_chance ,
+            biggest_lead ,
+            biggest_scoring_run ,
+            lead_changes ,
+            times_tied ,
+            timeouts_remaining ,
+            season_wins ,
+            season_losses
+        )
+        SELECT 
+            game_id ,
+            team_id ,
+            opponent_team_id ,
+            coach_idd ,
+            home ,
+            win ,
+            seed ,
+            team_score ,
+            opponent_score ,
+            plus_minus_points ,
+            num_minutes ,
+            assists ,
+            blocks ,
+            steals ,
+            turnovers_team ,
+            fouls_personal ,
+            field_goals_attempted ,
+            field_goals_made ,
+            field_goals_percentage ,
+            three_pointers_attempted ,
+            three_pointers_made ,
+            three_pointers_percentage ,
+            free_throws_attempted ,
+            free_throws_made ,
+            free_throws_percentage ,
+            rebounds_defensive ,
+            rebounds_offensive ,
+            rebounds_total ,
+            q1_points ,
+            q2_points ,
+            q3_points ,
+            q4_points ,
+            ot1_points ,
+            ot2_points ,
+            ot_all_points ,
+            bench_points ,
+            points_fast_break ,
+            points_from_turnovers ,
+            points_in_the_paint ,
+            points_second_chance ,
+            biggest_lead ,
+            biggest_scoring_run ,
+            lead_changes ,
+            times_tied ,
+            timeouts_remaining ,
+            season_wins ,
+            season_losses
+        FROM stg_team_stats s 
+        WHERE NOT EXISTS (
+            SELECT 1 FROM quarantine_team_stats q
+                WHERE q.game_id = s.game_id 
+                    AND q.team_id = s.team_id
+        )
+        ON CONFLICT (game_id, team_id) DO NOTHING;
+    """)
+
+    stag_table = conn.execute("SELECT COUNT(*) FROM stg_team_stats").fetchone()[0]
+    quarantive_table = conn.execute("SELECT COUNT(*) FROM quarantine_team_stats").fetchone()[0]
+    fact_table = conn.execute("SELECT COUNT(*) FROM fact_team_statistics").fetchone()[0]
+
+    print(f"{fact_table} = {stag_table} - {quarantive_table}")
+
+def insert_into_game_statistics():
+    duckdb_path = '/opt/airflow/warehouse/datawarehouse.duckdb'
+    conn = duckdb.connect(duckdb_path) 
+
+    conn.execute("""
+        CREATE OR REPLACE TABLE fact_game_statistics (
+            game_id INTEGER PRIMARY KEY,
+            date_id INTEGER,
+            arena_id INTEGER,
+            home_team_id INTEGER,
+            away_team_id INTEGER,
+            home_score INTEGER,
+            away_score INTEGER,
+            winner_team_id INTEGER,
+            attendance INTEGER,
+        );
+    """)
+
+    conn.execute("""
+        INSERT INTO fact_game_statistics (
+            game_id,
+            date_id,
+            home_team_id,
+            away_team_id,
+            home_score,
+            away_score,
+            winner_team_id,
+            attendance
+        )
+        SELECT game_id, 
+            TRY_CAST(strftime(game_date_time_est, '%Y%m%d') AS INTEGER) AS date_id,
+            home_team_id,
+            away_team_id,
+            home_score,
+            away_score,
+            winner_team_id,
+            attendance
+        FROM stag_games
+        WHERE home_score >= 0 AND away_score >= 0 AND 
+            ((winner_team_id = home_team_id AND home_score > away_score) 
+                OR winner_team_id = away_team_id AND home_score < away_score)
+        ON CONFLICT (game_id) DO UPDATE SET
+            date_id = EXCLUDED.date_id,
+            home_team_id = EXCLUDED.home_team_id,
+            away_team_id = EXCLUDED.away_team_id,
+            home_score = EXCLUDED.home_score,
+            away_score = EXCLUDED.away_score,
+            winner_team_id = EXCLUDED.winner_team_id,
+            attendance = EXCLUDED.attendance;
+
+    """)
+    stag_table = conn.execute("SELECT COUNT(*) FROM stag_games").fetchone()[0]
+        
+    fact_table = conn.execute("SELECT COUNT(*) FROM fact_game_statistics").fetchone()[0]
+    print (f"{stag_table} - {fact_table}")
